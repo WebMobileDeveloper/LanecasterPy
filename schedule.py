@@ -26,6 +26,7 @@ else:
 # /------------- choice server info -------------------
 
 yesterday = datetime.today() - timedelta(days=1)
+holidays = [pd.to_datetime('2019-01-01').date(), pd.to_datetime('2019-01-21').date(), pd.to_datetime('2019-02-18').date(), pd.to_datetime('2019-05-27').date(), pd.to_datetime('2019-07-04').date(), pd.to_datetime('2019-09-02').date(), pd.to_datetime('2019-10-14').date(), pd.to_datetime('2019-11-11').date(), pd.to_datetime('2019-11-28').date(), pd.to_datetime('2019-12-25').date(), ]
 
 
 def get_sql(sql_query):
@@ -177,17 +178,16 @@ def gen_route_data(route, db_table, train=1):
                 data.loc[date_index + index, 'TRUK_ORIGIN_slump'] = 1
     data = data.set_index('date')
 
-    explanatory_variables = [x for x in data.columns if (
-        ('ORIGIN' in x) | ('DESTINATION' in x)) & ('slump' not in x)]
+    explanatory_variables = [x for x in data.columns if (('ORIGIN' in x) | ('DESTINATION' in x)) & ('slump' not in x)]
 
     if train == 1:
         explanatory_variables.append('DATVF_' + route)
 
     for variable in explanatory_variables:
-        data[variable + '_change'] = data[variable]-data[variable].shift(1)
+        data[variable + '_change'] = data[variable] - data[variable].shift(1)
         data[variable + '_change_percent'] = (data[variable + '_change'] / data[variable].shift(1) - 1) * 100
-        data[variable + '_change7'] = data[variable]-data[variable].shift(7)
-        data[variable + '_change7_percent'] = (data[variable]/data[variable].shift(7) - 1) * 100
+        data[variable + '_change7'] = data[variable] - data[variable].shift(7)
+        data[variable + '_change7_percent'] = (data[variable] / data[variable].shift(7) - 1) * 100
         for index, function in enumerate(functions):
             for period in [7, 14]:
                 tempIndex = variable + '_' + str(period) + '_' + function_names[index]
@@ -195,7 +195,7 @@ def gen_route_data(route, db_table, train=1):
                 data[tempIndex + '_change'] = data[tempIndex] - data[tempIndex].shift(period)
                 data[tempIndex + '_change_shift1'] = data[tempIndex] - data[tempIndex].shift(1)
                 data[tempIndex + '_change_percent'] = (data[tempIndex] / data[tempIndex].shift(period) - 1) * 100
-                data[tempIndex + '_change_percent_shift1'] = (data[tempIndex] / data[tempIndex].shift(1)-1) * 100
+                data[tempIndex + '_change_percent_shift1'] = (data[tempIndex] / data[tempIndex].shift(1) - 1) * 100
                 data[tempIndex + '_up'] = data[tempIndex + '_change'].apply(lambda x: 1 if x > 0 else 0)
 
     for variable in explanatory_variables:
@@ -207,8 +207,7 @@ def gen_route_data(route, db_table, train=1):
     interact_variables_1 = '_change7'
     interact_variables_2 = '_change'
 
-    explanatory_variables = ['OTRI_ORIGIN', 'OTRI_DESTINATION', 'VTRI_ORIGIN', 'VTRI_DESTINATION', 'TRUK_ORIGIN', 'TRUK_DESTINATION', 'HAUL_ORIGIN', 'HAUL_DESTINATION', 'OTVI_ORIGIN', 'OTVI_DESTINATION',
-                             'OTMS_ORIGIN', 'ITMS_ORIGIN', 'OTMS_DESTINATION', 'ITMS_DESTINATION', 'ITVI_DESTINATION', 'ITRI_DESTINATION', 'TLT_DESTINATION', 'ITVI_ORIGIN', 'ITRI_ORIGIN', 'TLT_ORIGIN']
+    explanatory_variables = ['OTRI_ORIGIN', 'OTRI_DESTINATION', 'VTRI_ORIGIN', 'VTRI_DESTINATION', 'TRUK_ORIGIN', 'TRUK_DESTINATION', 'HAUL_ORIGIN', 'HAUL_DESTINATION', 'OTVI_ORIGIN', 'OTVI_DESTINATION', 'OTMS_ORIGIN', 'ITMS_ORIGIN', 'OTMS_DESTINATION', 'ITMS_DESTINATION', 'ITVI_DESTINATION', 'ITRI_DESTINATION', 'TLT_DESTINATION', 'ITVI_ORIGIN', 'ITRI_ORIGIN', 'TLT_ORIGIN']
     # explanatory_variables_base=explanatory_variables.copy()
     explanatory_variables_base = list(explanatory_variables)
     explanatory_variables = ([x + interact_variables_1 for x in explanatory_variables_base])
@@ -220,7 +219,7 @@ def gen_route_data(route, db_table, train=1):
     combinations_exp = permutations(explanatory_variables, 2)
 
     for combination in combinations_exp:
-        # print(combination[0] + '_'+ combination[1])
+        # print(combination[0] + '_' + combination[1])
         data[combination[0] + '_' + combination[1]] = data[combination[0]] * data[combination[1]]
         explanatory_variables.append(combination[0] + '_' + combination[1])
 
@@ -276,7 +275,6 @@ def update_dat_input():
     # ===================== update dat_input table ==============================
     print("------------------------------------------------------------------------------")
     print("----------------  start of dat_input table update --------------------------")
-   
 
     DAT_SONAR_mapping = {'CHICAGO': 'CHI', 'HOUSTON': 'HOU', 'PHILADELPHIA': 'PHL', 'MINNEAPOLIS': 'MSP',
                          'DALLAS': 'DAL', 'MEMPHIS': 'MEM', 'COLUMBUS': 'CMH', 'LOUISVILLE': 'SDF', 'CHARLOTTE': 'CLT',
@@ -313,6 +311,9 @@ def update_dat_input():
 
 def update_predicted_rates():
 
+    # ===================== update predicted_rates table ==============================
+    print("------------------------------------------------------------------------------")
+    print("----------------  start of predicted_rates table update --------------------------")
     # # FITTING THE MODEL
 
     # parameters
@@ -443,13 +444,12 @@ def update_predicted_rates():
         variables.append(dependent_variable)
         variables.remove(dependent_variable)
 
-        trained_models['model_specification_' + str(model_index)] = smf.ols('{0}'.format(dependent_variable) + '~{0}'.format('+  '.join(variables)), data_train_model).fit()
+        trained_models['model_specification_' + str(model_index)] = smf.ols('{0}'.format(dependent_variable) + '~{0}'.format('+ '.join(variables)), data_train_model).fit()
 
     # now fitting model to other routes
 
     sonar_cities = ['ATL', 'CHI', 'DAL', 'LAX', 'PHL', 'SEA']
-    non_sonar_cities = ['HOU', 'MSP', 'MEM', 'CMH', 'SDF',
-                        'CLT', 'DTW', 'STL', 'BWI', 'MKE', 'JAX', 'MSY']
+    non_sonar_cities = ['HOU', 'MSP', 'MEM', 'CMH', 'SDF', 'CLT', 'DTW', 'STL', 'BWI', 'MKE', 'JAX', 'MSY']
 
     # DAT_cities=sonar_cities.copy()
     DAT_cities = list(sonar_cities)
@@ -460,7 +460,6 @@ def update_predicted_rates():
     DAT_routes = [x[0] + x[1] for x in DAT_routes]
 
     days_prediction = 7
-    holidays = [pd.to_datetime('2019-01-11').date()]
 
     predictions = pd.DataFrame()
 
@@ -514,23 +513,29 @@ def update_predicted_rates():
 
             data_predict_lag = data_predict_lag.set_index('index')
 
-            data_predict.loc[data_predict.index[model_index-1], route] = trained_models['model_specification_' + str(model_index)].predict(data_predict_lag[variables]).dropna().iloc[-1]
+            data_predict.loc[data_predict.index[model_index - 1], route] = trained_models['model_specification_' + str(model_index)].predict(data_predict_lag[variables]).dropna().iloc[-1]
             # .iloc[model_index-1]
 
         data_predict = data_predict.iloc[:model_index].copy()
         data_predict.index = indices
-        print("route", route)
+        print("route:   ", route)
         predictions = pd.concat([predictions, data_predict[[route]].dropna()], sort=True)
+
+    # In[28]:
 
     predictions = pd.DataFrame(predictions.reset_index().groupby('index').mean())
 
     # # now appending DAT data
 
+    # In[96]:
+
     # get existing DAT data
     sql_query = '''
-    select *  from dat_input
+    select * from dat_input
     '''
     DAT = get_sql(sql_query)
+
+    # In[97]:
 
     # In case DAT is missing, filling in the missing dates and interpolating
     idx = pd.date_range(DAT['date'].min(), DAT['date'].max())
@@ -567,13 +572,13 @@ def update_predicted_rates():
     # In[104]:
 
     predictions = predictions.reset_index().rename(columns={'index': 'date'})
-    # predictions['prediction_date']=str(datetime.now().year*  10000+ datetime.now().month*  100+ datetime.now().day)
-    predictions['prediction_date'] = (datetime.today() - timedelta(days=1)).strftime('%Y%m%d')
+    predictions['prediction_date'] = datetime.now().strftime('%Y%m%d')
 
     # In[105]:
 
     predictions = predictions[predictions['date'] > last_DAT_date].copy()
     predictions = predictions.reset_index(drop=True)
+
     sql_query = '''
     select max(id) from predicted_rates
     '''
@@ -584,15 +589,43 @@ def update_predicted_rates():
     else:
         max_id = 0
 
-    predictions['id'] = max_id + 1 + predictions.index
-    print(predictions)
-    # predictions.to_csv(r'predictions.csv', encoding='utf-8')
+    predictions['id'] = max_id+1+predictions.index
 
-    # update_new_rows_mysql(predictions, 'predicted_rates')
+    predictions.to_csv(r'predictions.csv', encoding='utf-8')
+
+    update_new_rows_mysql(predictions, 'predicted_rates')
+
+    print("===========================================================================")
+    print("==================  predicted_rates table updated!!! ============================")
+    # /-------------------  end of update predicted_rates table ----------------------------------------------------
 
 
-# update_sonar_input()
-# update_dat_input()
+
+    # ===================== update predicted_trips_prices table ==============================
+    print("------------------------------------------------------------------------------")
+    print("----------------  start of predicted_trips_prices table update --------------------------")
+
+    sql_query = '''
+    select * from distance
+    '''
+
+    distance_df = get_sql(sql_query)
+
+    # multiplying distance and rate
+    predictions_prices = predictions.copy()
+    for column in [x for x in predictions_prices.columns if x not in ['date', 'prediction_date', 'id']]:
+        predictions_prices[column] = predictions_prices[column] * distance_df[distance_df['route'] == column]['miles'].values[0]
+    # VV 20190410, removing additional quotes
+    predictions_prices['date'] = predictions_prices['date'].apply(lambda x: x.replace("'", ''))
+    update_new_rows_mysql(predictions_prices, 'predicted_trips_prices')
+
+
+    print("===========================================================================")
+    print("==================  predicted_trips_prices table updated!!! ============================")
+    # /-------------------  end of update predicted_trips_prices table ----------------------------------------------------
+
+update_sonar_input()
+update_dat_input()
 update_predicted_rates()
 
 # closing the connection
