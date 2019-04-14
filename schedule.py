@@ -59,7 +59,7 @@ def update_new_rows_mysql(pandas_dataframe, table_name):
         values = ','.join(map(str, values))
 
         sql_query = '''
-        INSERT INTO 
+        INSERT INTO
          {0}({1})
         VALUES
          ({2})
@@ -525,6 +525,20 @@ def update_predicted_rates():
 
     predictions = pd.DataFrame(predictions.reset_index().groupby('index').mean())
 
+    # fixing outliers, crazy predictions when model breaks
+    for column in predictions.columns:
+        predictions[column + '_dev'] = predictions[column].apply(lambda x: np.abs(x))
+        predictions[column + '_dev'] = (predictions[column+'_dev'] - predictions[column + '_dev'].mean()) / predictions[column + '_dev'].std()
+
+        predictions[column + '_num_positive'] = predictions[predictions[column + '_dev'] > 0].shape[0]
+        predictions[column + '_outlier'] = predictions[[column + '_dev', column + '_num_positive']].apply(lambda x: 1 if (x[0] > 1.5) & (x[1] == 1) else 0, axis=1)
+
+        if predictions[column+'_outlier'].max() == 1:
+            sign_outlier = np.sign(predictions.loc[(predictions[column+'_outlier'] == 1), column]).values[0]
+            predictions.loc[predictions[column+'_outlier'] == 1, column] = predictions.loc[(predictions[column+'_outlier'] == 0) & (np.sign(predictions[column]) == sign_outlier), column].mean()
+
+    predictions = predictions.drop([x for x in predictions.columns if ('_dev' in x) | ('_num_positive' in x) | ('_outlier' in x)], 1)
+
     # # now appending DAT data
 
     # In[96]:
@@ -599,8 +613,6 @@ def update_predicted_rates():
     print("==================  predicted_rates table updated!!! ============================")
     # /-------------------  end of update predicted_rates table ----------------------------------------------------
 
-
-
     # ===================== update predicted_trips_prices table ==============================
     print("------------------------------------------------------------------------------")
     print("----------------  start of predicted_trips_prices table update --------------------------")
@@ -619,10 +631,10 @@ def update_predicted_rates():
     predictions_prices['date'] = predictions_prices['date'].apply(lambda x: x.replace("'", ''))
     update_new_rows_mysql(predictions_prices, 'predicted_trips_prices')
 
-
     print("===========================================================================")
     print("==================  predicted_trips_prices table updated!!! ============================")
     # /-------------------  end of update predicted_trips_prices table ----------------------------------------------------
+
 
 update_sonar_input()
 update_dat_input()
