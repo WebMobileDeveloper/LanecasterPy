@@ -16,7 +16,7 @@ from pandas.tseries.offsets import MonthEnd
 from datetime import datetime, timedelta
 
 # ============= choice server info =======================
-dev_server = True
+dev_server = False
 if(dev_server):
     db_connection = sql.connect(host='localhost', database='lanecaster_db', user='root', password='')
     folder = r'D:\WWW\LanecasterPy_Root\LanecasterPy\DAT_data'
