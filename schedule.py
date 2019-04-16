@@ -529,8 +529,7 @@ def update_predicted_rates():
     for column in predictions.columns:
         predictions[column + '_dev'] = predictions[column].apply(lambda x: np.abs(x))
         predictions[column + '_dev'] = (predictions[column+'_dev'] - predictions[column + '_dev'].mean()) / predictions[column + '_dev'].std()
-
-        predictions[column + '_num_positive'] = predictions[predictions[column + '_dev'] > 0].shape[0]
+        predictions[column + '_num_positive'] = predictions[predictions[column+'_dev'] > 0.5].shape[0]
         predictions[column + '_outlier'] = predictions[[column + '_dev', column + '_num_positive']].apply(lambda x: 1 if (x[0] > 1.5) & (x[1] == 1) else 0, axis=1)
 
         if predictions[column+'_outlier'].max() == 1:
@@ -580,7 +579,13 @@ def update_predicted_rates():
     predictions = predictions.reset_index()
     for prediction_index in predictions.index[-7:]:
         for column in [x for x in predictions.columns if x != 'index']:
-            predictions.loc[prediction_index, column] = predictions.loc[prediction_index, column] + predictions.loc[prediction_index-7, column]
+            # not allowing negative rate, use value from previous week in that case
+            if (predictions.loc[prediction_index, column] + predictions.loc[prediction_index-7, column]) <= 0:
+                predictions.loc[prediction_index, column] = predictions.loc[prediction_index-7, column]
+            else:
+                predictions.loc[prediction_index, column] = predictions.loc[prediction_index, column] + \
+                    predictions.loc[prediction_index-7, column]
+
     predictions = predictions.set_index('index')
 
     # In[104]:
