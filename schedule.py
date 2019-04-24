@@ -609,6 +609,11 @@ def update_predicted_rates():
         max_id = 0
 
     predictions['id'] = max_id+1+predictions.index
+    
+    #filling in the missing values
+    predictions=predictions.interpolate()
+    predictions=predictions.fillna(method='bfill')
+    predictions=predictions.fillna(method='ffill')
 
     predictions.to_csv(r'predictions.csv', encoding='utf-8')
 
