@@ -610,8 +610,8 @@ def update_predicted_rates():
 
     predictions['id'] = max_id+1+predictions.index
 
-    predictions.to_csv(r'predictions.csv', encoding='utf-8')
-
+    # predictions.to_csv(r'predictions.csv', encoding='utf-8')
+    predictions = predictions.interpolate()
     update_new_rows_mysql(predictions, 'predicted_rates')
 
     print("===========================================================================")
