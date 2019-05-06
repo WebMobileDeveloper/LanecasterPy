@@ -587,7 +587,7 @@ def update_predicted_rates():
                     predictions.loc[prediction_index-7, column]
 
     predictions = predictions.set_index('index')
-
+    predictions = predictions * 1.12
     # In[104]:
 
     predictions = predictions.reset_index().rename(columns={'index': 'date'})
